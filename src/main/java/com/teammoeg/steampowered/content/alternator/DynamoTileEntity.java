@@ -22,22 +22,23 @@ import java.util.List;
 
 import com.simibubi.create.content.contraptions.base.KineticTileEntity;
 import com.simibubi.create.foundation.utility.Lang;
+import com.simibubi.create.lib.utility.LazyOptional;
 import com.teammoeg.steampowered.SPConfig;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import team.reborn.energy.api.EnergyStorage;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.CapabilityEnergy;
-import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Adapted from: Create: Crafts & Additions under the MIT License
@@ -46,8 +47,8 @@ import net.minecraftforge.energy.IEnergyStorage;
  */
 public class DynamoTileEntity extends KineticTileEntity {
 
-    protected final InternalEnergyStorage energy;
-    private LazyOptional<IEnergyStorage> lazyEnergy;
+    public InternalEnergyStorage energy;
+    private LazyOptional<EnergyStorage> lazyEnergy;
     private boolean redstoneLocked = false;
     
     public static final int MAX_FE_OUT = SPConfig.COMMON.dynamoFeMaxOut.get(); // FE Output
@@ -55,21 +56,21 @@ public class DynamoTileEntity extends KineticTileEntity {
     public static final int IMPACT = SPConfig.COMMON.dynamoImpact.get(); // Impact on network
     public static final double EFFICIENCY = SPConfig.COMMON.dynamoEfficiency.get(); // Efficiency
 
-    public DynamoTileEntity(TileEntityType<?> typeIn) {
-        super(typeIn);
+    public DynamoTileEntity(BlockEntityType<?> typeIn, BlockPos pos, BlockState state) {
+        super(typeIn, pos, state);
         energy = new InternalEnergyStorage(FE_CAPACITY, 0, MAX_FE_OUT);
         lazyEnergy = LazyOptional.of(() -> energy);
     }
 
     @Override
-    public boolean addToGoggleTooltip(List<ITextComponent> tooltip, boolean isPlayerSneaking) {
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (this.getBlockState().getValue(DynamoBlock.REDSTONE_LOCKED)) {
-            tooltip.add(new StringTextComponent(spacing).append(new TranslationTextComponent("tooltip.steampowered.dynamo.locked").withStyle(TextFormatting.RED)));
+            tooltip.add(new TextComponent(spacing).append(new TranslatableComponent("tooltip.steampowered.dynamo.locked").withStyle(ChatFormatting.RED)));
             return true;
         }
-		tooltip.add(new StringTextComponent(spacing).append(new TranslationTextComponent("tooltip.steampowered.energy.production").withStyle(TextFormatting.GRAY)));
-		tooltip.add(new StringTextComponent(spacing).append(new StringTextComponent(" " + format(getEnergyProductionRate((int) (isSpeedRequirementFulfilled() ? getSpeed() : 0))) + "fe/t ") // fix
-		        .withStyle(TextFormatting.AQUA)).append(Lang.translate("gui.goggles.at_current_speed").withStyle(TextFormatting.DARK_GRAY)));
+		tooltip.add(new TextComponent(spacing).append(new TranslatableComponent("tooltip.steampowered.energy.production").withStyle(ChatFormatting.GRAY)));
+		tooltip.add(new TextComponent(spacing).append(new TextComponent(" " + format(getEnergyProductionRate((int) (isSpeedRequirementFulfilled() ? getSpeed() : 0))) + "fe/t ") // fix
+		        .withStyle(ChatFormatting.AQUA)).append(Lang.translate("gui.goggles.at_current_speed").withStyle(ChatFormatting.DARK_GRAY)));
 		return super.addToGoggleTooltip(tooltip, isPlayerSneaking);
     }
 
@@ -91,13 +92,6 @@ public class DynamoTileEntity extends KineticTileEntity {
 		return IMPACT;
     }
 
-    @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-        if (cap == CapabilityEnergy.ENERGY && (isEnergyInput(side) || isEnergyOutput(side)))// && !level.isClientSide
-            return lazyEnergy.cast();
-        return super.getCapability(cap, side);
-    }
-
     public boolean isEnergyInput(Direction side) {
         return false;
     }
@@ -107,14 +101,14 @@ public class DynamoTileEntity extends KineticTileEntity {
     }
 
     @Override
-    public void fromTag(BlockState state, CompoundNBT compound, boolean clientPacket) {
-        super.fromTag(state, compound, clientPacket);
+    public void read(CompoundTag compound, boolean clientPacket) {
+        super.read(compound, clientPacket);
         energy.read(compound);
         redstoneLocked = compound.getBoolean("redstonelocked");
     }
 
     @Override
-    public void write(CompoundNBT compound, boolean clientPacket) {
+    public void write(CompoundTag compound, boolean clientPacket) {
         super.write(compound, clientPacket);
         energy.write(compound);
         compound.putBoolean("redstonelocked", redstoneLocked);
@@ -141,11 +135,14 @@ public class DynamoTileEntity extends KineticTileEntity {
         for (Direction d : Direction.values()) {
             if (!isEnergyOutput(d))
                 continue;
-            IEnergyStorage ies = getCachedEnergy(d);
+            EnergyStorage ies = getCachedEnergy(d);
             if (ies == null)
                 continue;
-            int ext = energy.extractEnergy(ies.receiveEnergy(MAX_FE_OUT, true), false);
-            ies.receiveEnergy(ext, false);
+            try (Transaction transaction = Transaction.openOuter()) {
+                long ext = energy.extract(ies.insert(MAX_FE_OUT, transaction), transaction);
+                ies.insert(ext, transaction);
+                transaction.commit();
+            }
         }
     }
 
@@ -168,24 +165,24 @@ public class DynamoTileEntity extends KineticTileEntity {
         if (level.isClientSide())
             return;
         for (Direction side : Direction.values()) {
-            TileEntity te = level.getBlockEntity(worldPosition.relative(side));
+            BlockEntity te = level.getBlockEntity(worldPosition.relative(side));
             if (te == null) {
                 setCache(side, LazyOptional.empty());
                 continue;
             }
-            LazyOptional<IEnergyStorage> le = te.getCapability(CapabilityEnergy.ENERGY, side.getOpposite());
-            setCache(side, le);
+//            LazyOptional<EnergyStorage> le = () -> EnergyStorage.SIDED.find(te.getLevel(), te.getBlockPos(), side.getOpposite());
+//            setCache(side, le);
         }
     }
 
-    private LazyOptional<IEnergyStorage> escacheUp = LazyOptional.empty();
-    private LazyOptional<IEnergyStorage> escacheDown = LazyOptional.empty();
-    private LazyOptional<IEnergyStorage> escacheNorth = LazyOptional.empty();
-    private LazyOptional<IEnergyStorage> escacheEast = LazyOptional.empty();
-    private LazyOptional<IEnergyStorage> escacheSouth = LazyOptional.empty();
-    private LazyOptional<IEnergyStorage> escacheWest = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheUp = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheDown = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheNorth = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheEast = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheSouth = LazyOptional.empty();
+    private LazyOptional<EnergyStorage> escacheWest = LazyOptional.empty();
 
-    public void setCache(Direction side, LazyOptional<IEnergyStorage> storage) {
+    public void setCache(Direction side, LazyOptional<EnergyStorage> storage) {
         switch (side) {
             case DOWN:
                 escacheDown = storage;
@@ -208,7 +205,7 @@ public class DynamoTileEntity extends KineticTileEntity {
         }
     }
 
-    public IEnergyStorage getCachedEnergy(Direction side) {
+    public EnergyStorage getCachedEnergy(Direction side) {
         switch (side) {
             case DOWN:
                 return escacheDown.orElse(null);
@@ -224,10 +221,5 @@ public class DynamoTileEntity extends KineticTileEntity {
                 return escacheWest.orElse(null);
         }
         return null;
-    }
-
-    @Override
-    public World getWorld() {
-        return getLevel();
     }
 }

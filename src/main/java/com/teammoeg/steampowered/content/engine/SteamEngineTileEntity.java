@@ -18,50 +18,49 @@
 
 package com.teammoeg.steampowered.content.engine;
 
-import java.util.List;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelBlock;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelTileEntity;
 import com.simibubi.create.content.contraptions.components.flywheel.engine.EngineBlock;
 import com.simibubi.create.content.contraptions.components.flywheel.engine.EngineTileEntity;
 import com.simibubi.create.content.contraptions.goggles.IHaveGoggleInformation;
+import com.simibubi.create.lib.transfer.TransferUtil;
+import com.simibubi.create.lib.transfer.fluid.FluidTank;
+import com.simibubi.create.lib.transfer.fluid.FluidTransferable;
+import com.simibubi.create.lib.transfer.fluid.IFluidHandler;
+import com.simibubi.create.lib.utility.LazyOptional;
 import com.teammoeg.steampowered.FluidRegistry;
+import java.util.List;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.nbt.CompoundNBT;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.tags.ITag;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraft.tags.Tag;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
 
-public abstract class SteamEngineTileEntity extends EngineTileEntity implements IHaveGoggleInformation {
+public abstract class SteamEngineTileEntity extends EngineTileEntity implements IHaveGoggleInformation, FluidTransferable {
 
     private FluidTank tank;
     private LazyOptional<IFluidHandler> holder = LazyOptional.of(() -> tank);
     private int heatup=0;
-    public SteamEngineTileEntity(TileEntityType<? extends SteamEngineTileEntity> type) {
-        super(type);
+    public SteamEngineTileEntity(BlockEntityType<? extends SteamEngineTileEntity> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
         this.refreshCapability();
         this.tank = new FluidTank(this.getSteamStorage(), fluidStack -> {
-            ITag<Fluid> steamTag = FluidTags.getAllTags().getTag(new ResourceLocation("forge", "steam"));
+            Tag<Fluid> steamTag = FluidTags.getAllTags().getTag(new ResourceLocation("c", "steam"));
             if (steamTag != null) return fluidStack.getFluid().is(steamTag);
-            else return fluidStack.getFluid() == FluidRegistry.steam.get();
+            else return fluidStack.getFluid() == FluidRegistry.steam;
         });
     }
 
@@ -70,7 +69,7 @@ public abstract class SteamEngineTileEntity extends EngineTileEntity implements 
         super.tick();
         if (level != null && !level.isClientSide) {
             BlockState state = this.level.getBlockState(this.worldPosition);
-            if (!tank.isEmpty()&&tank.drain(this.getSteamConsumptionPerTick(), IFluidHandler.FluidAction.EXECUTE).getAmount() >= this.getSteamConsumptionPerTick()) {
+            if (!tank.isEmpty()&&tank.drain(this.getSteamConsumptionPerTick(), false).getAmount() >= this.getSteamConsumptionPerTick()) {
                 this.level.setBlockAndUpdate(this.worldPosition, state.setValue(SteamEngineBlock.LIT, true));
                 if(heatup>=60) {
                     this.appliedCapacity = this.getGeneratingCapacity();
@@ -90,36 +89,36 @@ public abstract class SteamEngineTileEntity extends EngineTileEntity implements 
         }
     }
 
-    public boolean addToGoggleTooltip(List<ITextComponent> tooltip, boolean isPlayerSneaking) {
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (tank.isEmpty() || tank.getFluidAmount() < this.getSteamConsumptionPerTick()) {
-            tooltip.add(componentSpacing.plainCopy().append(new TranslationTextComponent("tooltip.steampowered.steam_engine.not_enough_steam").withStyle(TextFormatting.RED)));
+            tooltip.add(componentSpacing.plainCopy().append(new TranslatableComponent("tooltip.steampowered.steam_engine.not_enough_steam").withStyle(ChatFormatting.RED)));
         }else if(heatup<20) {
-        	tooltip.add(componentSpacing.plainCopy().append(new TranslationTextComponent("tooltip.steampowered.steam_engine.heating").withStyle(TextFormatting.YELLOW)));
+        	tooltip.add(componentSpacing.plainCopy().append(new TranslatableComponent("tooltip.steampowered.steam_engine.heating").withStyle(ChatFormatting.YELLOW)));
         } else {
-            tooltip.add(componentSpacing.plainCopy().append(new TranslationTextComponent("tooltip.steampowered.steam_engine.running").withStyle(TextFormatting.GREEN)));
+            tooltip.add(componentSpacing.plainCopy().append(new TranslatableComponent("tooltip.steampowered.steam_engine.running").withStyle(ChatFormatting.GREEN)));
         }
-        return this.containedFluidTooltip(tooltip, isPlayerSneaking, getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY));
+        return this.containedFluidTooltip(tooltip, isPlayerSneaking, TransferUtil.getFluidHandler(this));
     }
 
-    protected void fromTag(BlockState state, CompoundNBT compound, boolean clientPacket) {
-        super.fromTag(state, compound, clientPacket);
+    protected void read(CompoundTag compound, boolean clientPacket) {
+        super.read(compound, clientPacket);
         tank.readFromNBT(compound.getCompound("TankContent"));
         heatup=compound.getInt("heatup");
     }
 
-    public void write(CompoundNBT compound, boolean clientPacket) {
-        compound.put("TankContent", tank.writeToNBT(new CompoundNBT()));
+    public void write(CompoundTag compound, boolean clientPacket) {
+        compound.put("TankContent", tank.writeToNBT(new CompoundTag()));
         compound.putInt("heatup",heatup);
         super.write(compound, clientPacket);
     }
 
-    @Override
     @Nonnull
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction facing) {
+    @Override
+    public IFluidHandler getFluidHandler(@Nullable Direction direction) {
         if (!this.holder.isPresent()) {
             this.refreshCapability();
         }
-        return capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY ? holder.cast() : super.getCapability(capability, facing);
+        return TransferUtil.getFluidHandler(this).resolve().get();
     }
 
     private void refreshCapability() {
@@ -138,7 +137,7 @@ public abstract class SteamEngineTileEntity extends EngineTileEntity implements 
             Direction wheelFacing = (Direction) wheelState.getValue(FlywheelBlock.HORIZONTAL_FACING);
             if (wheelFacing.getAxis() == engineFacing.getClockWise().getAxis()) {
                 if (!FlywheelBlock.isConnected(wheelState) || FlywheelBlock.getConnection(wheelState) == engineFacing.getOpposite()) {
-                    TileEntity te = this.level.getBlockEntity(wheelPos);
+                    BlockEntity te = this.level.getBlockEntity(wheelPos);
                     if (!te.isRemoved()) {
                         if (te instanceof FlywheelTileEntity) {
                             if (!FlywheelBlock.isConnected(wheelState)) {

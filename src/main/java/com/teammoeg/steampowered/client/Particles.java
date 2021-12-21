@@ -20,14 +20,14 @@ package com.teammoeg.steampowered.client;
 
 import com.teammoeg.steampowered.SteamPowered;
 
-import net.minecraft.particles.BasicParticleType;
-import net.minecraft.particles.ParticleType;
-import net.minecraftforge.fml.RegistryObject;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.Registry;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.resources.ResourceLocation;
+
+import net.fabricmc.fabric.api.particle.v1.FabricParticleTypes;
 
 public class Particles {
-    public static final DeferredRegister<ParticleType<?>> REGISTER = DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, SteamPowered.MODID);
+    public static final SimpleParticleType STEAM = Registry.register(Registry.PARTICLE_TYPE, new ResourceLocation(SteamPowered.MODID, "steam"), FabricParticleTypes.simple(false));
 
-    public static final RegistryObject<BasicParticleType> STEAM = REGISTER.register("steam", () -> new BasicParticleType(false));
+    public static void register() {}
 }

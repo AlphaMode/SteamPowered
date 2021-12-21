@@ -21,9 +21,9 @@ package com.teammoeg.steampowered.content.burner;
 import com.teammoeg.steampowered.SPConfig;
 import com.teammoeg.steampowered.registrate.SPTiles;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class SteelBurnerBlock extends BurnerBlock {
     public SteelBurnerBlock(Properties properties) {
@@ -31,8 +31,8 @@ public class SteelBurnerBlock extends BurnerBlock {
     }
 
     @Override
-    public TileEntity createTileEntity(BlockState state, IBlockReader world) {
-        return SPTiles.STEEL_BURNER.create();
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return SPTiles.STEEL_BURNER.create(pos, state);
     }
 
 	@Override

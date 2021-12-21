@@ -18,9 +18,11 @@
 
 package com.teammoeg.steampowered;
 
-import net.minecraft.fluid.Fluid;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.tags.ITag;
+import net.fabricmc.fabric.api.tag.TagFactory;
+
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.Tag;
+import net.minecraft.world.level.material.Fluid;
 
 public class SPTags {
 
@@ -28,10 +30,10 @@ public class SPTags {
 
     }
 
-    public static final ITag.INamedTag<Fluid> STEAM = forgeTag("steam");
+    public static final Tag.Named<Fluid> STEAM = forgeTag("steam");
 
-    private static ITag.INamedTag<Fluid> forgeTag(String name) {
-        return FluidTags.bind("forge:" + name);
+    private static Tag.Named<Fluid> forgeTag(String name) {
+        return TagFactory.FLUID.create(new ResourceLocation("c:" + name));
     }
 
 }

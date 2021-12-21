@@ -19,23 +19,23 @@
 package com.teammoeg.steampowered.client;
 
 import com.simibubi.create.AllItems;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.world.World;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.level.Level;
 
-@OnlyIn(Dist.CLIENT)
+@Environment(EnvType.CLIENT)
 public class ClientUtils {
     public static Minecraft mc() {
         return Minecraft.getInstance();
     }
 
-    public static World getClientWorld() {
+    public static Level getClientWorld() {
         return mc().level;
     }
     public static boolean hasGoggles() {
-    	return AllItems.GOGGLES.isIn(mc().player.getItemBySlot(EquipmentSlotType.HEAD));
+    	return AllItems.GOGGLES.isIn(mc().player.getItemBySlot(EquipmentSlot.HEAD));
     }
 }

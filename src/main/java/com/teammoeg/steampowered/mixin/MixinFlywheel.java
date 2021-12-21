@@ -12,17 +12,19 @@ import com.simibubi.create.content.contraptions.components.flywheel.FlywheelBloc
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelTileEntity;
 import com.simibubi.create.content.contraptions.components.flywheel.engine.EngineBlock;
 
-import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 
 @Mixin(FlywheelTileEntity.class)
 public abstract class MixinFlywheel extends GeneratingKineticTileEntity{
-	public MixinFlywheel(TileEntityType<?> typeIn) {
-		super(typeIn);
+	public MixinFlywheel(BlockEntityType<?> typeIn, BlockPos pos, BlockState state) {
+		super(typeIn, pos, state);
 	}
 	@Shadow(remap=false)
 	public abstract void setRotation(float speed, float capacity);
-	@Inject(at=@At("HEAD"),method="tick")
+	@Inject(at=@At("HEAD"),method="tick", remap = false)
 	public void sp$tick(CallbackInfo cbi) {
 		Direction at=FlywheelBlock.getConnection(getBlockState());
 		KineticNetwork nw=this.getOrCreateNetwork();
@@ -30,8 +32,8 @@ public abstract class MixinFlywheel extends GeneratingKineticTileEntity{
 			nw.updateCapacityFor(this,this.capacity);
 		}
 		if(at!=null) {
-			if(!(this.getWorld().getBlockState(this.getBlockPos().relative(at,2)).getBlock() instanceof EngineBlock)) {
-				FlywheelBlock.setConnection(getWorld(),getBlockPos(),getBlockState(),null);
+			if(!(this.getLevel().getBlockState(this.getBlockPos().relative(at,2)).getBlock() instanceof EngineBlock)) {
+				FlywheelBlock.setConnection(getLevel(),getBlockPos(),getBlockState(),null);
 				this.setRotation(0,0);
 			}
 		}else this.setRotation(0,0);

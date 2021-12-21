@@ -18,14 +18,12 @@
 
 package com.teammoeg.steampowered;
 
-import net.minecraft.item.Item;
-import net.minecraftforge.fml.RegistryObject;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.Registry;
+import net.minecraft.world.item.Item;
 
 public class ItemRegistry {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, SteamPowered.MODID);
+    public static Item pressurizedGasContainer = Registry.register(Registry.ITEM, SteamPowered.rl("pressurized_gas_container"), new Item(new Item.Properties()));
+    public static Item pressurizedSteamContainer = Registry.register(Registry.ITEM, SteamPowered.rl("pressurized_steam_container"), new Item(new Item.Properties()));
 
-    public static RegistryObject<Item> pressurizedGasContainer = ITEMS.register("pressurized_gas_container", () -> new Item(new Item.Properties()));
-    public static RegistryObject<Item> pressurizedSteamContainer = ITEMS.register("pressurized_steam_container", () -> new Item(new Item.Properties()));
+    public static void register() {}
 }

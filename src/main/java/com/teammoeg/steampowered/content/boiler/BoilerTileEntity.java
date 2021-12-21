@@ -21,30 +21,29 @@ package com.teammoeg.steampowered.content.boiler;
 import java.util.List;
 
 import com.simibubi.create.content.contraptions.goggles.IHaveGoggleInformation;
+import com.simibubi.create.lib.transfer.fluid.FluidStack;
+import com.simibubi.create.lib.transfer.fluid.FluidTank;
+import com.simibubi.create.lib.transfer.fluid.FluidTransferable;
+import com.simibubi.create.lib.transfer.fluid.IFluidHandler;
+import com.simibubi.create.lib.utility.LazyOptional;
 import com.teammoeg.steampowered.FluidRegistry;
 import com.teammoeg.steampowered.SPConfig;
 import com.teammoeg.steampowered.content.burner.IHeatReceiver;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 
-public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiver, ITickableTileEntity, IHaveGoggleInformation {
-    FluidTank input = new FluidTank(10000,s->s.getFluid() == Fluids.WATER);
+import org.jetbrains.annotations.Nullable;
+
+public abstract class BoilerTileEntity extends BlockEntity implements IHeatReceiver, IHaveGoggleInformation, FluidTransferable {
+    FluidTank input = new FluidTank(10000, s->s.getFluid() == Fluids.WATER);
     FluidTank output = new FluidTank(10000);
     private IFluidHandler ft = new IFluidHandler() {
         @Override
@@ -65,7 +64,7 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
         }
 
         @Override
-        public int getTankCapacity(int tank) {
+        public long getTankCapacity(int tank) {
             return 10000;
         }
 
@@ -77,17 +76,17 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
         }
 
         @Override
-        public int fill(FluidStack resource, FluidAction action) {
+        public long fill(FluidStack resource, boolean action) {
             return input.fill(resource, action);
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
+        public FluidStack drain(FluidStack resource, boolean action) {
             return output.drain(resource, action);
         }
 
         @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
+        public FluidStack drain(long maxDrain, boolean action) {
             return output.drain(maxDrain, action);
         }
     };
@@ -95,12 +94,12 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
     int lastheat;
     private LazyOptional<IFluidHandler> holder = LazyOptional.of(() -> ft);
 
-    public BoilerTileEntity(TileEntityType<?> p_i48289_1_) {
-        super(p_i48289_1_);
+    public BoilerTileEntity(BlockEntityType<?> p_i48289_1_, BlockPos pos, BlockState state) {
+        super(p_i48289_1_, pos, state);
     }
 
     // Easy, easy
-    public void readCustomNBT(CompoundNBT nbt) {
+    public void readCustomNBT(CompoundTag nbt) {
         input.readFromNBT(nbt.getCompound("in"));
         output.readFromNBT(nbt.getCompound("out"));
         heatreceived = nbt.getInt("hu");
@@ -108,46 +107,44 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
     }
 
     // Easy, easy
-    public void writeCustomNBT(CompoundNBT nbt) {
-        nbt.put("in", input.writeToNBT(new CompoundNBT()));
-        nbt.put("out", output.writeToNBT(new CompoundNBT()));
+    public void writeCustomNBT(CompoundTag nbt) {
+        nbt.put("in", input.writeToNBT(new CompoundTag()));
+        nbt.put("out", output.writeToNBT(new CompoundTag()));
         nbt.putInt("hu", heatreceived);
         nbt.putInt("lasthu", lastheat);
     }
 
     @Override
-    public void load(BlockState state, CompoundNBT nbt) {
-        super.load(state, nbt);
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
         readCustomNBT(nbt);
     }
 
     @Override
-    public CompoundNBT save(CompoundNBT nbt) {
-        super.save(nbt);
+    public void saveAdditional(CompoundTag nbt) {
+        super.saveAdditional(nbt);
         writeCustomNBT(nbt);
-        return nbt;
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        CompoundNBT nbt = new CompoundNBT();
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        CompoundTag nbt = new CompoundTag();
         this.writeCustomNBT(nbt);
-        return new SUpdateTileEntityPacket(this.getBlockPos(), 3, nbt);
+        return ClientboundBlockEntityDataPacket.create(this, (blockEntity -> nbt));
     }
 
-    @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket pkt) {
-        this.readCustomNBT(pkt.getTag());
-    }
+//    @Override
+//    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket pkt) {
+//        this.readCustomNBT(pkt.getTag());
+//    }
 
     @Override
-    public CompoundNBT getUpdateTag() {
-        CompoundNBT nbt = super.getUpdateTag();
+    public CompoundTag getUpdateTag() {
+        CompoundTag nbt = super.getUpdateTag();
         writeCustomNBT(nbt);
         return nbt;
     }
 
-    @Override
     public void tick() {
     	
     	
@@ -161,8 +158,8 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
 	            int consume = Math.min(getHUPerTick(), heatreceived);
 	            heatreceived = 0;
 	            double waterconsume=(SPConfig.COMMON.steamPerWater.get()*10);
-	            consume =  Math.min((int)(this.input.drain((int) Math.ceil(consume / waterconsume), FluidAction.EXECUTE).getAmount() * waterconsume), consume);
-	            this.output.fill(new FluidStack(FluidRegistry.steam.get().getFluid(), consume / 10), FluidAction.EXECUTE);
+	            consume =  Math.min((int)(this.input.drain((int) Math.ceil(consume / waterconsume), false).getAmount() * waterconsume), consume);
+	            this.output.fill(new FluidStack(FluidRegistry.steam.getSource(), consume / 10), false);
 	            flag=true;
         	}
         	this.setChanged();
@@ -177,7 +174,7 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
 
     }
 
-    public boolean addToGoggleTooltip(List<ITextComponent> tooltip, boolean isPlayerSneaking) {
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         this.containedFluidTooltip(tooltip, isPlayerSneaking, LazyOptional.of(() -> input));
         this.containedFluidTooltip(tooltip, isPlayerSneaking, LazyOptional.of(() -> output));
         return true;
@@ -185,12 +182,13 @@ public abstract class BoilerTileEntity extends TileEntity implements IHeatReceiv
 
     protected abstract int getHUPerTick();
 
+    @Nullable
     @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
+    public IFluidHandler getFluidHandler(@Nullable Direction direction) {
         if (!this.holder.isPresent()) {
             this.refreshCapability();
         }
-        return cap == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY ? holder.cast() : super.getCapability(cap, side);
+        return holder.resolve().get();
     }
 
     private void refreshCapability() {

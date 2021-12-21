@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "steampowered",
+  "version": "1.1.10",
+
+  "name": "Create: Steam Powered",
+  "description": "Expanding Create mod to the Steam Age",
+  "authors": [
+    "[TeamMoeg] YueSha",
+    "khjxiaogu",
+    "goumo_g",
+    "AlphaMode",
+    "We appreciate MRH0 for his code on RPM-FE conversion logic which we adapted in Steam Powered"
+  ],
+  "contact": {
+    "sources": "https://github.com/Create-Fabric/Create-Refabricated"
+  },
+
+  "license": "MIT",
+  "icon": "logo.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.teammoeg.steampowered.SteamPowered"
+    ],
+    "client": [
+      "com.teammoeg.steampowered.client.SteamPoweredClient"
+    ]
+  },
+
+  "mixins": [
+    "steampowered.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.12.11",
+    "fabric": ">=0.44.0",
+    "minecraft": ">=1.18.1",
+    "registrate-fabric": "*",
+    "flywheel": "*"
+  }
+}

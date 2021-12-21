@@ -18,24 +18,25 @@
 
 package com.teammoeg.steampowered.content.engine;
 
-import java.util.List;
-
 import com.simibubi.create.foundation.block.ITE;
 import com.simibubi.create.foundation.item.ItemDescription.Palette;
 import com.simibubi.create.foundation.item.TooltipHelper;
 import com.teammoeg.steampowered.SPConfig;
 import com.teammoeg.steampowered.client.ClientUtils;
 import com.teammoeg.steampowered.registrate.SPTiles;
+import java.util.List;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class SteelSteamEngineBlock extends SteamEngineBlock implements ITE<SteelSteamEngineTileEntity> {
     public SteelSteamEngineBlock(Properties builder) {
@@ -43,16 +44,16 @@ public class SteelSteamEngineBlock extends SteamEngineBlock implements ITE<Steel
     }
 
     @Override
-    public TileEntity createTileEntity(BlockState state, IBlockReader world) {
-        return SPTiles.STEEL_STEAM_ENGINE.create();
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return SPTiles.STEEL_STEAM_ENGINE.create(pos, state);
     }
     @Override
-	public void appendHoverText(ItemStack i, IBlockReader w, List<ITextComponent> t,
-			ITooltipFlag f) {
+	public void appendHoverText(ItemStack i, BlockGetter w, List<Component> t,
+                                TooltipFlag f) {
     	if(Screen.hasShiftDown()) {
-    		t.add(new TranslationTextComponent("tooltip.steampowered.engine.brief").withStyle(TextFormatting.GOLD));
+    		t.add(new TranslatableComponent("tooltip.steampowered.engine.brief").withStyle(ChatFormatting.GOLD));
     		if(ClientUtils.hasGoggles()) 
-    		t.add(new TranslationTextComponent("tooltip.steampowered.engine.steamconsume",SPConfig.COMMON.steelFlywheelSteamConsumptionPerTick.get()).withStyle(TextFormatting.GOLD));
+    		t.add(new TranslatableComponent("tooltip.steampowered.engine.steamconsume",SPConfig.COMMON.steelFlywheelSteamConsumptionPerTick.get()).withStyle(ChatFormatting.GOLD));
     	}else {
     		t.add(TooltipHelper.holdShift(Palette.Gray,false));
     	}
@@ -61,5 +62,10 @@ public class SteelSteamEngineBlock extends SteamEngineBlock implements ITE<Steel
     @Override
     public Class<SteelSteamEngineTileEntity> getTileEntityClass() {
         return SteelSteamEngineTileEntity.class;
+    }
+
+    @Override
+    public BlockEntityType<? extends SteelSteamEngineTileEntity> getTileEntityType() {
+        return SPTiles.STEEL_STEAM_ENGINE.get();
     }
 }

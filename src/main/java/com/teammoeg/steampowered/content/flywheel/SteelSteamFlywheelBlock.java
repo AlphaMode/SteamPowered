@@ -21,9 +21,9 @@ package com.teammoeg.steampowered.content.flywheel;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelBlock;
 import com.teammoeg.steampowered.registrate.SPTiles;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class SteelSteamFlywheelBlock extends FlywheelBlock {
     public SteelSteamFlywheelBlock(Properties properties) {
@@ -31,7 +31,7 @@ public class SteelSteamFlywheelBlock extends FlywheelBlock {
     }
 
     @Override
-    public TileEntity createTileEntity(BlockState state, IBlockReader world) {
-        return SPTiles.STEEL_STEAM_FLYWHEEL.create();
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return SPTiles.STEEL_STEAM_FLYWHEEL.create(pos, state);
     }
 }

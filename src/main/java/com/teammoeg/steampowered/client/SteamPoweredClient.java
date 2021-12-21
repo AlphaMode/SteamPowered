@@ -22,33 +22,28 @@ import com.teammoeg.steampowered.FluidRegistry;
 import com.teammoeg.steampowered.block.SPBlockPartials;
 import com.teammoeg.steampowered.ponder.SPPonderIndex;
 import com.teammoeg.steampowered.registrate.SPBlocks;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.RenderTypeLookup;
-import net.minecraftforge.client.event.ParticleFactoryRegisterEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
-public class SteamPoweredClient {
-    public static void addClientListeners(IEventBus forgeEventBus, IEventBus modEventBus) {
+public class SteamPoweredClient implements ClientModInitializer {
+
+    @Override
+    public void onInitializeClient() {
         SPBlockPartials.clientInit();
-        modEventBus.addListener(SteamPoweredClient::clientInit);
-        modEventBus.addListener(SteamPoweredClient::setupRenderType);
-        modEventBus.addListener(SteamPoweredClient::registerParticleFactories);
+        SPPonderIndex.register();
+        setupRenderType();
+        registerParticleFactories();
     }
 
-    public static void clientInit(FMLClientSetupEvent event) {
-        SPPonderIndex.register();
+    public static void registerParticleFactories() {
+        ParticleFactoryRegistry.getInstance().register(Particles.STEAM, SteamParticle.Factory::new);
     }
-    public static void registerParticleFactories(ParticleFactoryRegisterEvent event) {
-        Minecraft.getInstance().particleEngine.register(Particles.STEAM.get(), SteamParticle.Factory::new);
-    }
-    public static void setupRenderType(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            RenderTypeLookup.setRenderLayer(FluidRegistry.steam.get(), RenderType.translucent());
-            RenderTypeLookup.setRenderLayer(FluidRegistry.steamFlowing.get(), RenderType.translucent());
-            RenderTypeLookup.setRenderLayer(SPBlocks.DYNAMO.get(), RenderType.cutoutMipped());
-        });
+    public static void setupRenderType() {
+        BlockRenderLayerMap.INSTANCE.putFluid(FluidRegistry.steam, RenderType.translucent());
+        BlockRenderLayerMap.INSTANCE.putFluid(FluidRegistry.steamFlowing, RenderType.translucent());
+        BlockRenderLayerMap.INSTANCE.putBlock(SPBlocks.DYNAMO.get(), RenderType.cutoutMipped());
     }
 }

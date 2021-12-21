@@ -18,23 +18,21 @@
 
 package com.teammoeg.steampowered.client.instance;
 
-import static net.minecraft.state.properties.BlockStateProperties.HORIZONTAL_FACING;
-
 import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import com.jozufozu.flywheel.backend.instancing.IDynamicInstance;
-import com.jozufozu.flywheel.backend.instancing.InstanceData;
-import com.jozufozu.flywheel.backend.instancing.Instancer;
-import com.jozufozu.flywheel.backend.material.InstanceMaterial;
-import com.jozufozu.flywheel.backend.material.MaterialManager;
-import com.jozufozu.flywheel.core.materials.ModelData;
+import com.jozufozu.flywheel.api.InstanceData;
+import com.jozufozu.flywheel.api.Instancer;
+import com.jozufozu.flywheel.api.Material;
+import com.jozufozu.flywheel.api.MaterialManager;
+import com.jozufozu.flywheel.api.instance.IDynamicInstance;
+import com.jozufozu.flywheel.core.materials.model.ModelData;
 import com.jozufozu.flywheel.util.transform.MatrixTransformStack;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.content.contraptions.base.KineticTileInstance;
-import com.simibubi.create.content.contraptions.base.RotatingData;
+import com.simibubi.create.content.contraptions.base.flwdata.RotatingData;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelBlock;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelTileEntity;
 import com.simibubi.create.foundation.utility.AngleHelper;
@@ -42,10 +40,12 @@ import com.simibubi.create.foundation.utility.AnimationTickHolder;
 import com.teammoeg.steampowered.block.SPBlockPartials;
 import com.teammoeg.steampowered.mixin.FlywheelTileEntityAccess;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.Direction;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.MathHelper;
+import static net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING;
+
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class CastIronFlywheelInstance extends KineticTileInstance<FlywheelTileEntity> implements IDynamicInstance {
     protected final Direction facing;
@@ -66,7 +66,7 @@ public class CastIronFlywheelInstance extends KineticTileInstance<FlywheelTileEn
 
     protected float lastAngle = Float.NaN;
 
-    public CastIronFlywheelInstance(MaterialManager<?> modelManager, FlywheelTileEntity tile) {
+    public CastIronFlywheelInstance(MaterialManager modelManager, FlywheelTileEntity tile) {
         super(modelManager, tile);
 
         facing = blockState.getValue(HORIZONTAL_FACING);
@@ -84,7 +84,7 @@ public class CastIronFlywheelInstance extends KineticTileInstance<FlywheelTileEn
 
             connectorAngleMult = flipAngle ? -1 : 1;
 
-            InstanceMaterial<ModelData> mat = getTransformMaterial();
+            Material<ModelData> mat = getTransformMaterial();
 
             upperRotating = mat.getModel(SPBlockPartials.CAST_IRON_FLYWHEEL_UPPER_ROTATING, blockState).createInstance();
             lowerRotating = mat.getModel(SPBlockPartials.CAST_IRON_FLYWHEEL_LOWER_ROTATING, blockState).createInstance();
@@ -119,8 +119,8 @@ public class CastIronFlywheelInstance extends KineticTileInstance<FlywheelTileEn
     }
 
     private void animate(float angle) {
-        MatrixStack ms = new MatrixStack();
-        MatrixTransformStack msr = MatrixTransformStack.of(ms);
+        PoseStack ms = new PoseStack();
+        MatrixTransformStack msr = new MatrixTransformStack(ms);
 
         msr.translate(getInstancePosition());
 
@@ -192,14 +192,14 @@ public class CastIronFlywheelInstance extends KineticTileInstance<FlywheelTileEn
         float shift = upper ? 1 / 4f : -1 / 8f;
         float offset = upper ? 1 / 4f : 1 / 4f;
         float radians = (float) (angle / 180 * Math.PI);
-        float shifting = MathHelper.sin(radians) * shift + offset;
+        float shifting = Mth.sin(radians) * shift + offset;
 
         float maxAngle = upper ? -5 : -15;
         float minAngle = upper ? -45 : 5;
         float barAngle = 0;
 
         if (rotating)
-            barAngle = MathHelper.lerp((MathHelper.sin((float) (radians + Math.PI / 2)) + 1) / 2, minAngle, maxAngle);
+            barAngle = Mth.lerp((Mth.sin((float) (radians + Math.PI / 2)) + 1) / 2, minAngle, maxAngle);
 
         float pivotX = (upper ? 8f : 3f) / 16;
         float pivotY = (upper ? 8f : 2f) / 16;

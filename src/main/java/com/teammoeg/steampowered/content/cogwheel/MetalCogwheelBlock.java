@@ -21,9 +21,9 @@ package com.teammoeg.steampowered.content.cogwheel;
 import com.simibubi.create.content.contraptions.relays.elementary.CogWheelBlock;
 import com.teammoeg.steampowered.registrate.SPTiles;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class MetalCogwheelBlock extends CogWheelBlock {
     protected MetalCogwheelBlock(boolean large, Properties properties) {
@@ -31,8 +31,8 @@ public class MetalCogwheelBlock extends CogWheelBlock {
     }
 
     @Override
-    public TileEntity createTileEntity(BlockState state, IBlockReader world) {
-        return SPTiles.METAL_COGWHEEL.create();
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return SPTiles.METAL_COGWHEEL.create(pos, state);
     }
 
     public static MetalCogwheelBlock small(Properties properties) {

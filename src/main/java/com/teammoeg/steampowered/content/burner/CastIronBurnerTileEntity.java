@@ -20,12 +20,14 @@ package com.teammoeg.steampowered.content.burner;
 
 import com.teammoeg.steampowered.SPConfig;
 
-import net.minecraft.tileentity.TileEntityType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class CastIronBurnerTileEntity extends BurnerTileEntity {
 
-    public CastIronBurnerTileEntity(TileEntityType<?> type) {
-        super(type);
+    public CastIronBurnerTileEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     @Override

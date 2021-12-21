@@ -21,9 +21,10 @@ package com.teammoeg.steampowered.content.boiler;
 import com.teammoeg.steampowered.SPConfig;
 import com.teammoeg.steampowered.registrate.SPTiles;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+
 
 public class BronzeBoilerBlock extends BoilerBlock {
     public BronzeBoilerBlock(Properties properties) {
@@ -31,8 +32,8 @@ public class BronzeBoilerBlock extends BoilerBlock {
     }
 
     @Override
-    public TileEntity createTileEntity(BlockState state, IBlockReader world) {
-        return SPTiles.BRONZE_BOILER.create();
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return SPTiles.BRONZE_BOILER.create(pos, state);
     }
 
 	@Override

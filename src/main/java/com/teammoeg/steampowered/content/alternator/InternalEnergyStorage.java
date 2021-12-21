@@ -27,96 +27,122 @@
 
 package com.teammoeg.steampowered.content.alternator;
 
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.CapabilityEnergy;
-import net.minecraftforge.energy.EnergyStorage;
-import net.minecraftforge.energy.IEnergyStorage;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import team.reborn.energy.api.base.SimpleEnergyStorage;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
  * Adapted from: Create: Crafts & Additions
  * @author MRH0
  */
-public class InternalEnergyStorage extends EnergyStorage {
+public class InternalEnergyStorage extends SimpleEnergyStorage {
+    private long capacity;
+
     public InternalEnergyStorage(int capacity) {
-        super(capacity, capacity, capacity, 0);
+        super(capacity, capacity, capacity);
     }
 
     public InternalEnergyStorage(int capacity, int maxTransfer) {
-        super(capacity, maxTransfer, maxTransfer, 0);
+        super(capacity, maxTransfer, maxTransfer);
     }
 
     public InternalEnergyStorage(int capacity, int maxReceive, int maxExtract) {
-        super(capacity, maxReceive, maxExtract, 0);
+        super(capacity, maxReceive, maxExtract);
     }
 
     public InternalEnergyStorage(int capacity, int maxReceive, int maxExtract, int energy) {
-        super(capacity, maxReceive, maxExtract, energy);
+        super(capacity, maxReceive, maxExtract);
+        setEnergy(energy);
     }
 
-    public CompoundNBT write(CompoundNBT nbt) {
-        nbt.putInt("energy", energy);
+    public CompoundTag write(CompoundTag nbt) {
+        nbt.putLong("energy", amount);
         return nbt;
     }
 
-    public void read(CompoundNBT nbt) {
-        setEnergy(nbt.getInt("energy"));
+    public void read(CompoundTag nbt) {
+        setEnergy(nbt.getLong("energy"));
     }
 
-    public CompoundNBT write(CompoundNBT nbt, String name) {
-        nbt.putInt("energy_" + name, energy);
+    public CompoundTag write(CompoundTag nbt, String name) {
+        nbt.putLong("energy_" + name, amount);
         return nbt;
     }
 
-    public void read(CompoundNBT nbt, String name) {
-        setEnergy(nbt.getInt("energy_" + name));
+    public void read(CompoundTag nbt, String name) {
+        setEnergy(nbt.getLong("energy_" + name));
     }
 
     @Override
-    public boolean canExtract() {
+    public boolean supportsExtraction() {
         return true;
     }
 
     @Override
-    public boolean canReceive() {
+    public boolean supportsInsertion() {
         return true;
     }
 
-    public int internalConsumeEnergy(int consume) {
-        int oenergy = energy;
-        energy = Math.max(0, energy - consume);
-        return oenergy - energy;
+    public long internalConsumeEnergy(int consume) {
+        long oenergy = amount;
+        amount = Math.max(0, amount - consume);
+        return oenergy - amount;
     }
 
-    public int internalProduceEnergy(int produce) {
-        int oenergy = energy;
-        energy = Math.min(capacity, energy + produce);
-        return oenergy - energy;
+    public long internalProduceEnergy(int produce) {
+        long oenergy = amount;
+        amount = Math.min(capacity, amount + produce);
+        return oenergy - amount;
     }
 
-    public void setEnergy(int energy) {
-        this.energy = energy;
+    public void setEnergy(long energy) {
+        this.amount = energy;
     }
 
     @Deprecated
-    public void outputToSide(World world, BlockPos pos, Direction side, int max) {
-        TileEntity te = world.getBlockEntity(pos.relative(side));
+    public void outputToSide(Level world, BlockPos pos, Direction side, int max) {
+        BlockEntity te = world.getBlockEntity(pos.relative(side));
         if (te == null)
             return;
-        LazyOptional<IEnergyStorage> opt = te.getCapability(CapabilityEnergy.ENERGY, side.getOpposite());
-        IEnergyStorage ies = opt.orElse(null);
-        if (ies == null)
-            return;
-        int ext = this.extractEnergy(max, false);
-        this.receiveEnergy(ext - ies.receiveEnergy(ext, false), false);
+//        LazyOptional<EnergyStorage> opt = () -> EnergyStorage.SIDED.find(world, pos, side.getOpposite());
+//        EnergyStorage ies = opt.orElse(null);
+//        if (ies == null)
+//            return;
+        try (Transaction transaction = Transaction.openOuter()) {
+            long ext = this.extract(max, transaction);
+//            this.insert(ext - ies.insert(ext, transaction), transaction);
+            transaction.commit();
+        }
     }
 
     @Override
     public String toString() {
-        return getEnergyStored() + "/" + getMaxEnergyStored();
+        return getAmount() + "/" + getCapacity();
+    }
+
+    @Override
+    public long insert(long maxAmount, TransactionContext transaction) {
+        return 0;
+    }
+
+    @Override
+    public long extract(long maxAmount, TransactionContext transaction) {
+        return 0;
+    }
+
+    @Override
+    public long getAmount() {
+        return 0;
+    }
+
+    @Override
+    public long getCapacity() {
+        return 0;
     }
 }
